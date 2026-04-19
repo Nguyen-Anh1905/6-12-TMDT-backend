@@ -3,6 +3,7 @@ package com.example.backend_tmdt.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -43,13 +44,14 @@ public class UserEntity extends BaseEntity {
     private List<AddressEntity> addresses;
 
     // User -> Role (N-N)
-    @ManyToMany(fetch = FetchType.LAZY)
+    @Builder.Default
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "user_roles",
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
-    private Set<RoleEntity> roles;
+    private Set<RoleEntity> roles = new HashSet<>();
 
     // User - Shop (1 - 1)
     @OneToOne(mappedBy = "user")
