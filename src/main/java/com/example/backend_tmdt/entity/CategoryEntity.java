@@ -22,6 +22,10 @@ public class CategoryEntity extends BaseEntity {
     @Column(name = "category_name", nullable = false)
     private String categoryName;
 
+    @Column(name = "moderation_level", nullable = false)
+    @Builder.Default
+    private Integer moderationLevel = 1; // 1: safe auto-approve, >=2: require manual review
+
     // Parent category
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")

@@ -2,6 +2,7 @@ package com.example.backend_tmdt.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.util.List;
 
@@ -11,7 +12,7 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 public class ProductEntity extends BaseEntity {
 
     @Id
@@ -33,6 +34,25 @@ public class ProductEntity extends BaseEntity {
 
     @Column(name = "attributes", columnDefinition = "JSON")
     private String attributes;
+
+    @Column(name = "image_url")
+    private String imageUrl;
+
+    @Column(name = "status", nullable = false, columnDefinition = "INT DEFAULT 1")
+    @Builder.Default
+    private Integer status = 1; // 1: visible, 0: hidden
+
+    @Column(name = "average_rating", columnDefinition = "FLOAT DEFAULT 0")
+    @Builder.Default
+    private Float averageRating = 0F;
+
+    @Column(name = "sales_count", columnDefinition = "INT DEFAULT 0")
+    @Builder.Default
+    private Integer salesCount = 0;
+
+    @Column(name = "is_approved", nullable = false, columnDefinition = "BOOLEAN DEFAULT false")
+    @Builder.Default
+    private Boolean isApproved = false; // For admin moderation
 
     // Product - Category (N - 1)
     @ManyToOne(fetch = FetchType.LAZY)

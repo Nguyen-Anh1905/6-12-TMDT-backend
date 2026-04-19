@@ -1,32 +1,28 @@
 package com.example.backend_tmdt.service;
 
+import com.example.backend_tmdt.dto.request.CreateProductRequest;
+import com.example.backend_tmdt.dto.request.SearchProductRequest;
+import com.example.backend_tmdt.dto.request.UpdateProductRequest;
+import com.example.backend_tmdt.dto.response.ProductListResponse;
+import com.example.backend_tmdt.dto.response.ProductResponse;
 import com.example.backend_tmdt.entity.ProductEntity;
-import com.example.backend_tmdt.repository.ProductRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
 
-@Service
-@RequiredArgsConstructor
-public class ProductService {
+public interface ProductService {
+    ProductResponse createProduct(CreateProductRequest request);
 
-    private final ProductRepository productRepository;
+    ProductResponse updateProduct(Long productId, UpdateProductRequest request);
 
-    public List<ProductEntity> findAll() {
-        return productRepository.findAll();
-    }
+    ProductListResponse getVisibleProducts(Integer page, Integer pageSize);
 
-    public Optional<ProductEntity> findById(Long id) {
-        return productRepository.findById(id);
-    }
+    ProductListResponse searchProducts(SearchProductRequest request);
 
-    public ProductEntity save(ProductEntity entity) {
-        return productRepository.save(entity);
-    }
+    ProductResponse getProductDetails(Long productId);
 
-    public void deleteById(Long id) {
-        productRepository.deleteById(id);
-    }
+    ProductListResponse getProductsByShop(Long shopId, Integer page, Integer pageSize);
+
+    void deleteProduct(Long productId);
+
 }
