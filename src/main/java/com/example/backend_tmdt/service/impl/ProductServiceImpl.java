@@ -19,7 +19,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -57,8 +56,6 @@ public class ProductServiceImpl implements ProductService {
                 .averageRating(0F)
                 .salesCount(0)
                 .isApproved(autoApproved)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
                 .build();
 
         ProductEntity saved = productRepository.save(product);
@@ -100,11 +97,9 @@ public class ProductServiceImpl implements ProductService {
             product.setCategory(category);
         }
 
-        product.setUpdatedAt(LocalDateTime.now());
         ProductEntity updated = productRepository.save(product);
         return productMapper.toProductResponse(updated);
     }
-
 
     @Override
     public ProductListResponse getVisibleProducts(Integer page, Integer pageSize) {
@@ -139,8 +134,7 @@ public class ProductServiceImpl implements ProductService {
                         request.getCategoryId(),
                         1,
                         true,
-                        pageable
-                );
+                        pageable);
             } else {
                 productsPage = productRepository.searchProductsByFilters(
                         request.getKeyword(),
@@ -148,13 +142,11 @@ public class ProductServiceImpl implements ProductService {
                         request.getMaxPrice() != null ? request.getMaxPrice() : Long.MAX_VALUE,
                         1,
                         true,
-                        pageable
-                );
+                        pageable);
             }
         } else if (request.getCategoryId() != null) {
-                productsPage = productRepository.findByCategoryCategoryIdAndStatusAndIsApproved(
-                    request.getCategoryId(), 1, true, pageable
-            );
+            productsPage = productRepository.findByCategoryCategoryIdAndStatusAndIsApproved(
+                    request.getCategoryId(), 1, true, pageable);
         } else {
             productsPage = productRepository.findByStatusAndIsApproved(1, true, pageable);
         }
@@ -189,8 +181,7 @@ public class ProductServiceImpl implements ProductService {
     public ProductListResponse getProductsByShop(Long shopId, Integer page, Integer pageSize) {
         Pageable pageable = PageRequest.of(page, pageSize);
         Page<ProductEntity> productsPage = productRepository.findByShopShopIdAndStatusAndIsApproved(
-                shopId, 1, true, pageable
-        );
+                shopId, 1, true, pageable);
 
         List<ProductResponse> content = productsPage.getContent()
                 .stream()
