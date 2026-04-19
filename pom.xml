@@ -73,9 +73,11 @@
 
 	<build>
 		<plugins>
+			<!-- Improved maven-compiler-plugin config: explicit version, set release to java.version, and ensure annotation processor path uses the explicit Lombok version -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.10.1</version>
 				<configuration>
 					<annotationProcessorPaths>
 						<path>
