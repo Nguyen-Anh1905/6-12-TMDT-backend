@@ -1,8 +1,11 @@
 package com.example.backend_tmdt.config;
 
+import com.example.backend_tmdt.entity.RoleEntity;
+import com.example.backend_tmdt.repository.RoleRepository;
 import com.example.backend_tmdt.security.CustomUserDetailsService;
 import com.example.backend_tmdt.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -43,8 +46,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
-                        // Product listing và detail là public
-                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/products", "/api/products/**").permitAll()
+                        // Product & Category listing + search là public
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/products", "/api/products/**", "/api/categories").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/products/search").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/seller/**").hasAnyRole("SELLER", "ADMIN")
                         .requestMatchers("/api/buyer/**").hasAnyRole("BUYER", "ADMIN")
@@ -86,5 +90,22 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
+    }
+
+    @Bean
+    public CommandLineRunner roleDataInitializer(RoleRepository roleRepository) {
+        return args -> {
+            ensureRole(roleRepository, "ROLE_ADMIN");
+            ensureRole(roleRepository, "ROLE_SELLER");
+            ensureRole(roleRepository, "ROLE_BUYER");
+        };
+    }
+
+    private void ensureRole(RoleRepository roleRepository, String roleName) {
+        if (roleRepository.findByRoleName(roleName).isEmpty()) {
+            RoleEntity role = new RoleEntity();
+            role.setRoleName(roleName);
+            roleRepository.save(role);
+        }
     }
 }

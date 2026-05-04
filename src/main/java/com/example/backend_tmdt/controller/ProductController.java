@@ -73,4 +73,14 @@ public class ProductController {
         ProductListResponse response = productService.getProductsByShop(shopId, page, pageSize);
         return ResponseEntity.ok(response);
     }
+
+    // Lấy sản phẩm theo category (bao gồm category con)
+    @GetMapping("/category/{categoryId}")
+    public ResponseEntity<ProductListResponse> getProductsByCategory(
+            @PathVariable Long categoryId,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "20") Integer pageSize) {
+        ProductListResponse response = productService.getProductsByCategory(categoryId, page, pageSize);
+        return ResponseEntity.ok(response);
+    }
 }

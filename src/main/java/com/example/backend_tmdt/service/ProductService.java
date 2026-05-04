@@ -23,6 +23,8 @@ public interface ProductService {
 
     ProductListResponse getProductsByShop(Long shopId, Integer page, Integer pageSize);
 
+    ProductListResponse getProductsByCategory(Long categoryId, Integer page, Integer pageSize);
+
     void deleteProduct(Long productId);
 
 }

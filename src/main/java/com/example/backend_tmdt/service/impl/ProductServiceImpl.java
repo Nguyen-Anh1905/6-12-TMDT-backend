@@ -19,8 +19,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -127,11 +129,12 @@ public class ProductServiceImpl implements ProductService {
         Page<ProductEntity> productsPage;
         if (request.getKeyword() != null && !request.getKeyword().isEmpty()) {
             if (request.getCategoryId() != null) {
-                productsPage = productRepository.searchProductsByCategoryAndFilters(
+                List<Long> categoryIds = collectCategoryAndDescendantIds(request.getCategoryId());
+                productsPage = productRepository.searchProductsByCategoryIdsAndFilters(
                         request.getKeyword(),
                         request.getMinPrice() != null ? request.getMinPrice() : 0L,
                         request.getMaxPrice() != null ? request.getMaxPrice() : Long.MAX_VALUE,
-                        request.getCategoryId(),
+                        categoryIds,
                         1,
                         true,
                         pageable);
@@ -145,8 +148,9 @@ public class ProductServiceImpl implements ProductService {
                         pageable);
             }
         } else if (request.getCategoryId() != null) {
-            productsPage = productRepository.findByCategoryCategoryIdAndStatusAndIsApproved(
-                    request.getCategoryId(), 1, true, pageable);
+            List<Long> categoryIds = collectCategoryAndDescendantIds(request.getCategoryId());
+            productsPage = productRepository.findByCategoryCategoryIdInAndStatusAndIsApproved(
+                    categoryIds, 1, true, pageable);
         } else {
             productsPage = productRepository.findByStatusAndIsApproved(1, true, pageable);
         }
@@ -197,10 +201,52 @@ public class ProductServiceImpl implements ProductService {
                 .build();
     }
 
+            @Override
+            public ProductListResponse getProductsByCategory(Long categoryId, Integer page, Integer pageSize) {
+            Pageable pageable = PageRequest.of(page, pageSize);
+            List<Long> categoryIds = collectCategoryAndDescendantIds(categoryId);
+            Page<ProductEntity> productsPage = productRepository.findByCategoryCategoryIdInAndStatusAndIsApproved(
+                categoryIds, 1, true, pageable);
+
+            List<ProductResponse> content = productsPage.getContent()
+                .stream()
+                .map(productMapper::toProductResponse)
+                .collect(Collectors.toList());
+
+            return ProductListResponse.builder()
+                .content(content)
+                .totalPages(productsPage.getTotalPages())
+                .totalElements(productsPage.getTotalElements())
+                .currentPage(page)
+                .pageSize(pageSize)
+                .build();
+            }
+
     @Override
     public void deleteProduct(Long productId) {
         ProductEntity product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found"));
         productRepository.deleteById(productId);
+    }
+
+    private List<Long> collectCategoryAndDescendantIds(Long rootCategoryId) {
+        CategoryEntity rootCategory = categoryRepository.findById(rootCategoryId)
+                .orElseThrow(() -> new RuntimeException("Category not found"));
+
+        List<Long> categoryIds = new ArrayList<>();
+        Deque<Long> queue = new ArrayDeque<>();
+        queue.add(rootCategory.getCategoryId());
+
+        while (!queue.isEmpty()) {
+            Long currentId = queue.poll();
+            categoryIds.add(currentId);
+
+            List<CategoryEntity> children = categoryRepository.findByParentCategoryCategoryId(currentId);
+            for (CategoryEntity child : children) {
+                queue.add(child.getCategoryId());
+            }
+        }
+
+        return categoryIds;
     }
 }
