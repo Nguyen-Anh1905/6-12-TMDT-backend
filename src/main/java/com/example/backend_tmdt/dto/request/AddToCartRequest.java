@@ -10,4 +10,6 @@ import lombok.*;
 public class AddToCartRequest {
     private Long productId;
     private Integer quantity;
+    private String variantLabel;
+    private Long variantPrice;
 }
