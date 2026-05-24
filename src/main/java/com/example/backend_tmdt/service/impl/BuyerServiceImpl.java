@@ -247,10 +247,15 @@ public class BuyerServiceImpl implements BuyerService {
                 .orElseThrow(() -> new RuntimeException("Dia chi khong ton tai"));
 
         CartEntity cart = getOrCreateCart(user);
-        List<CartProductEntity> shopItems = cartProductRepository.findByCartCartId(cart.getCartId()).stream()
+    Set<Long> selectedIds = request.getSelectedCartItemIds() != null
+        ? request.getSelectedCartItemIds().stream().filter(Objects::nonNull).collect(Collectors.toSet())
+        : Collections.emptySet();
+
+    List<CartProductEntity> shopItems = cartProductRepository.findByCartCartId(cart.getCartId()).stream()
                 .filter(item -> item.getProduct() != null
                         && item.getProduct().getShop() != null
-                        && item.getProduct().getShop().getShopId().equals(request.getShopId()))
+            && item.getProduct().getShop().getShopId().equals(request.getShopId())
+            && (selectedIds.isEmpty() || selectedIds.contains(item.getId())))
                 .collect(Collectors.toList());
 
         if (shopItems.isEmpty()) {
@@ -311,6 +316,8 @@ public class BuyerServiceImpl implements BuyerService {
                     .product(product)
                     .quantity(item.getQuantity())
                     .priceAtPurchase(item.getPrice())
+                    .variantLabel(item.getVariantLabel())
+                    .variantPrice(item.getVariantPrice())
                     .build());
 
             product.setStockQuantity(product.getStockQuantity() - item.getQuantity());
