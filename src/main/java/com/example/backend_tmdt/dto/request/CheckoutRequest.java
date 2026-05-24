@@ -1,6 +1,7 @@
 package com.example.backend_tmdt.dto.request;
 
 import lombok.*;
+import java.util.List;
 
 @Getter
 @Setter
@@ -12,4 +13,5 @@ public class CheckoutRequest {
     private Long addressId;
     private String paymentMethod;
     private String voucherCode;
+    private List<Long> selectedCartItemIds;
 }
