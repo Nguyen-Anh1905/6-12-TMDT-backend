@@ -19,5 +19,7 @@ public class MergeGuestCartRequest {
     public static class GuestCartItemRequest {
         private Long productId;
         private Integer quantity;
+        private String variantLabel;
+        private Long variantPrice;
     }
 }
