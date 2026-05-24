@@ -13,21 +13,16 @@ import java.util.Collection;
 @Repository
 public interface ProductRepository extends JpaRepository<ProductEntity, Long> {
 
-    // Find by status and approval
     Page<ProductEntity> findByStatusAndIsApproved(Integer status, Boolean isApproved, Pageable pageable);
 
-        // Find by category.categoryId, status and approval
-        Page<ProductEntity> findByCategoryCategoryIdAndStatusAndIsApproved(Long categoryId, Integer status, Boolean isApproved, Pageable pageable);
+    Page<ProductEntity> findByCategoryCategoryIdAndStatusAndIsApproved(Long categoryId, Integer status, Boolean isApproved, Pageable pageable);
 
-        Page<ProductEntity> findByCategoryCategoryIdInAndStatusAndIsApproved(Collection<Long> categoryIds, Integer status, Boolean isApproved, Pageable pageable);
+    Page<ProductEntity> findByCategoryCategoryIdInAndStatusAndIsApproved(Collection<Long> categoryIds, Integer status, Boolean isApproved, Pageable pageable);
 
-        // Find by shop.shopId, status and approval
-        Page<ProductEntity> findByShopShopIdAndStatusAndIsApproved(Long shopId, Integer status, Boolean isApproved, Pageable pageable);
+    Page<ProductEntity> findByShopShopIdAndStatusAndIsApproved(Long shopId, Integer status, Boolean isApproved, Pageable pageable);
 
-    // Find pending products (not approved)
     Page<ProductEntity> findByIsApproved(Boolean isApproved, Pageable pageable);
 
-    // Search by keyword, price range, status and approval
     @Query("SELECT p FROM ProductEntity p WHERE " +
             "LOWER(p.productName) LIKE LOWER(CONCAT('%', :keyword, '%')) AND " +
             "p.price BETWEEN :minPrice AND :maxPrice AND " +
@@ -41,7 +36,6 @@ public interface ProductRepository extends JpaRepository<ProductEntity, Long> {
             Pageable pageable
     );
 
-    // Search by keyword, category, price range, status and approval
     @Query("SELECT p FROM ProductEntity p WHERE " +
             "LOWER(p.productName) LIKE LOWER(CONCAT('%', :keyword, '%')) AND " +
             "p.category.categoryId = :categoryId AND " +
@@ -72,9 +66,13 @@ public interface ProductRepository extends JpaRepository<ProductEntity, Long> {
             Pageable pageable
     );
 
-    // Find all products by shop ID (for seller dashboard)
     Page<ProductEntity> findByShopShopId(Long shopId, Pageable pageable);
 
-        // Find seller products excluding soft-deleted items
-        Page<ProductEntity> findByShopShopIdAndStatusNot(Long shopId, Integer status, Pageable pageable);
+    Page<ProductEntity> findByShopShopIdAndStatusNot(Long shopId, Integer status, Pageable pageable);
+
+    long countByShopShopId(Long shopId);
+
+    long countByShopShopIdAndStatus(Long shopId, Integer status);
+
+    long countByShopShopIdAndIsApproved(Long shopId, Boolean isApproved);
 }

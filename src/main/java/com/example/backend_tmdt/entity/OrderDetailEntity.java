@@ -23,6 +23,13 @@ public class OrderDetailEntity extends BaseEntity{
     @Column(name = "price_at_purchase")
     private Integer priceAtPurchase;
 
+    @Column(name = "variant_label")
+    private String variantLabel;
+
+    @Column(name = "variant_price")
+    private Integer variantPrice;
+
+
     // orderDetail - order (N-1)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)

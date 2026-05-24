@@ -80,7 +80,7 @@ public class AuthService {
                 )
         );
 
-        // Lôi user từ DB
+        // Lấy user từ DB, tìm theo email, username, phone
         UserEntity user = userRepository.findByLoginKey(request.getLoginKey())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin người dùng!"));
 

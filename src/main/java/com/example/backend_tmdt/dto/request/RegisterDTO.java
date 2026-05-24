@@ -2,6 +2,7 @@ package com.example.backend_tmdt.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
@@ -15,7 +16,11 @@ public class RegisterDTO {
     private String username;
 
     @NotBlank(message = "Mật khẩu không được để trống")
-    @Size(min = 6, message = "Mật khẩu phải có ít nhất 6 ký tự")
+        @Size(min = 8, message = "Mật khẩu phải có ít nhất 8 ký tự")
+        @Pattern(
+            regexp = "^(?=.*[A-Za-z])(?=.*\\d)(?=.*[^A-Za-z0-9]).+$",
+            message = "Mật khẩu phải có chữ, số và ký tự đặc biệt"
+        )
     private String password;
 
     @NotBlank(message = "Email không được để trống")

@@ -5,11 +5,15 @@ import com.example.backend_tmdt.dto.request.SearchProductRequest;
 import com.example.backend_tmdt.dto.request.UpdateProductRequest;
 import com.example.backend_tmdt.dto.response.ProductListResponse;
 import com.example.backend_tmdt.dto.response.ProductResponse;
+import com.example.backend_tmdt.dto.response.ProductReviewResponse;
+import com.example.backend_tmdt.service.CatalogService;
 import com.example.backend_tmdt.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/products")
@@ -17,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 public class ProductController {
 
     private final ProductService productService;
+    private final CatalogService catalogService;
 
     // seller thêm sản phẩm mới
     @PostMapping("/create")
@@ -57,11 +62,17 @@ public class ProductController {
         return ResponseEntity.ok(response);
     }
 
-    // xem chi tiết thông tin 1 sản phẩm
+    // xem chi tiết thông tin 1 sản phẩm (guest/buyer - khong can dang nhap)
     @GetMapping("/{id}")
     public ResponseEntity<ProductResponse> getProductDetails(@PathVariable Long id) {
         ProductResponse response = productService.getProductDetails(id);
         return ResponseEntity.ok(response);
+    }
+
+    // xem danh gia san pham (guest/buyer - khong can dang nhap)
+    @GetMapping("/{id}/reviews")
+    public ResponseEntity<List<ProductReviewResponse>> getProductReviews(@PathVariable Long id) {
+        return ResponseEntity.ok(catalogService.getProductReviews(id));
     }
 
     // Xem thông tin của shop, gồm cả sản phẩm

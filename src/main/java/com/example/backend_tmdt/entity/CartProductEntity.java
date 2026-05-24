@@ -23,6 +23,12 @@ public class CartProductEntity extends BaseEntity {
     @Column(name = "price")
     private Integer price;
 
+    @Column(name = "variant_label")
+    private String variantLabel;
+
+    @Column(name = "variant_price")
+    private Integer variantPrice;
+
     // CartProduct - cart (N-1)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cart_id", nullable = false)

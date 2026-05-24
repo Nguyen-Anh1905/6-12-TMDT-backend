@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 public class VoucherResponse {
     private Long voucherId;
     private String code;
+
     private String discountType;  // PERCENT, FIXED
     private Double discountValue;
     private Double minOrderValue;
@@ -24,4 +25,5 @@ public class VoucherResponse {
     private String shopName;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
 }

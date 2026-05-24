@@ -1,6 +1,6 @@
 package com.example.backend_tmdt.exception;
 
-import com.example.backend_tmdt.dto.response.ApiResponse;
+import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -12,18 +12,18 @@ public class GlobalExceptionHandler {
 
     // Tóm lỗi validation từ @Valid (ví dụ: username dưới 4 ký tự)
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<Void>> handleValidationException(MethodArgumentNotValidException ex) {
+    public ResponseEntity<Map<String, String>> handleValidationException(MethodArgumentNotValidException ex) {
         String errorMessage = ex.getBindingResult().getFieldErrors().stream()
                 .map(FieldError::getDefaultMessage)
                 .findFirst()
                 .orElse("Dữ liệu đầu vào không hợp lệ");
 
-        return ResponseEntity.badRequest().body(ApiResponse.error(9999, errorMessage));
+        return ResponseEntity.badRequest().body(Map.of("message", errorMessage));
     }
 
     // Tóm lỗi logic từ Service (ví dụ: "Email đã tồn tại!")
     @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<ApiResponse<Void>> handleRuntimeException(RuntimeException ex) {
-        return ResponseEntity.badRequest().body(ApiResponse.error(9999, ex.getMessage()));
+    public ResponseEntity<Map<String, String>> handleRuntimeException(RuntimeException ex) {
+        return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
     }
 }

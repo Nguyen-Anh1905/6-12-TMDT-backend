@@ -46,12 +46,14 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
-                        // Product & Category listing + search là public
-                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/products", "/api/products/**", "/api/categories").permitAll()
+                        // Guest: xem san pham, danh muc, shop khong can dang nhap
+                        .requestMatchers(org.springframework.http.HttpMethod.GET,
+                                "/api/products", "/api/products/**", "/api/categories", "/api/shops", "/api/shops/**").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/products/search").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/seller/**").hasAnyRole("SELLER", "ADMIN")
-                        .requestMatchers("/api/buyer/**").hasAnyRole("BUYER", "ADMIN")
+                        // Buyer: gio hang, don hang, dia chi - can dang nhap (moi role dang nhap deu mua duoc)
+                        .requestMatchers("/api/buyer/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
@@ -70,10 +72,10 @@ public class SecurityConfig {
         return config.getAuthenticationManager();
     }
 
+
     @Bean
     public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        authProvider.setUserDetailsService(userDetailsService);
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(userDetailsService);
         authProvider.setPasswordEncoder(passwordEncoder());
         return authProvider;
     }

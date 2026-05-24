@@ -1,6 +1,8 @@
 package com.example.backend_tmdt.dto.request;
 
+
 import jakarta.validation.constraints.*;
+
 import lombok.*;
 import java.time.LocalDateTime;
 
@@ -8,6 +10,8 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
+
 public class UpdateVoucherRequest {
 
     @NotBlank(message = "Mã voucher không được để trống")
@@ -40,5 +44,6 @@ public class UpdateVoucherRequest {
     @NotNull(message = "Trạng thái không được để trống")
     @Min(value = 0, message = "Trạng thái phải là 0 hoặc 1")
     @Max(value = 1, message = "Trạng thái phải là 0 hoặc 1")
+
     private Integer isActive;
 }
