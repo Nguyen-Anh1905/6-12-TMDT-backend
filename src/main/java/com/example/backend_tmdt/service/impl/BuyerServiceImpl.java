@@ -15,7 +15,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -71,13 +70,16 @@ public class BuyerServiceImpl implements BuyerService {
         if (product.getStatus() != 1 || !Boolean.TRUE.equals(product.getIsApproved())) {
             throw new RuntimeException("San pham khong con ban");
         }
+        String variantLabel = request.getVariantLabel() != null ? request.getVariantLabel().trim() : null;
+        int effectivePrice = request.getVariantPrice() != null ? request.getVariantPrice().intValue() : product.getPrice().intValue();
+
         if (product.getStockQuantity() < request.getQuantity()) {
             throw new RuntimeException("Khong du ton kho");
         }
 
         CartEntity cart = getOrCreateCart(user);
         Optional<CartProductEntity> existing = cartProductRepository
-                .findByCartCartIdAndProductProductId(cart.getCartId(), product.getProductId());
+                .findByCartCartIdAndProductProductIdAndVariantLabel(cart.getCartId(), product.getProductId(), variantLabel);
 
         if (existing.isPresent()) {
             CartProductEntity item = existing.get();
@@ -86,14 +88,18 @@ public class BuyerServiceImpl implements BuyerService {
                 throw new RuntimeException("Vuot qua ton kho");
             }
             item.setQuantity(newQty);
-            item.setPrice(product.getPrice().intValue());
+            item.setPrice(effectivePrice);
+            item.setVariantLabel(variantLabel);
+            item.setVariantPrice(request.getVariantPrice() != null ? request.getVariantPrice().intValue() : null);
             cartProductRepository.save(item);
         } else {
             cartProductRepository.save(CartProductEntity.builder()
                     .cart(cart)
                     .product(product)
                     .quantity(request.getQuantity())
-                    .price(product.getPrice().intValue())
+                    .price(effectivePrice)
+                    .variantLabel(variantLabel)
+                    .variantPrice(request.getVariantPrice() != null ? request.getVariantPrice().intValue() : null)
                     .build());
         }
 
@@ -150,6 +156,8 @@ public class BuyerServiceImpl implements BuyerService {
                     addToCart(AddToCartRequest.builder()
                             .productId(item.getProductId())
                             .quantity(item.getQuantity())
+                            .variantLabel(item.getVariantLabel())
+                            .variantPrice(item.getVariantPrice())
                             .build());
                 } catch (RuntimeException ignored) {
                     // Bo qua san pham het hang hoac khong hop le khi merge
@@ -497,6 +505,7 @@ public class BuyerServiceImpl implements BuyerService {
                 .productName(product.getProductName())
                 .imageUrl(product.getImageUrl())
                 .price(price)
+            .variantLabel(item.getVariantLabel())
                 .quantity(item.getQuantity())
                 .lineTotal(price * item.getQuantity())
                 .shopId(product.getShop() != null ? product.getShop().getShopId() : null)
