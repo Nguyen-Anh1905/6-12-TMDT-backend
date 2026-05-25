@@ -18,7 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -491,8 +490,14 @@ public class SellerServiceImpl implements SellerService {
                         .imageUrl(d.getProduct() != null ? d.getProduct().getImageUrl() : null)
                         .quantity(d.getQuantity())
                         .priceAtPurchase(d.getPriceAtPurchase() != null ? d.getPriceAtPurchase().longValue() : 0L)
+                    .variantLabel(d.getVariantLabel())
+                    .lineTotal((d.getPriceAtPurchase() != null ? d.getPriceAtPurchase().longValue() : 0L) * d.getQuantity())
                         .build())
-                .collect(Collectors.toList());
+                .toList();
+
+        long subtotal = items.stream().mapToLong(item -> item.getLineTotal() != null ? item.getLineTotal() : 0L).sum();
+        long shippingFee = 30000L;
+        long discountAmount = Math.max(0L, subtotal + shippingFee - (order.getTotalAmount() != null ? order.getTotalAmount() : 0L));
 
         return SellerOrderResponse.builder()
                 .orderId(order.getOrderId())
@@ -507,6 +512,10 @@ public class SellerServiceImpl implements SellerService {
                 .buyerName(order.getUser() != null ? order.getUser().getFullName() : null)
                 .createdAt(order.getCreatedAt())
                 .items(items)
+                .subtotal(subtotal)
+                .shippingFee(shippingFee)
+                .discountAmount(discountAmount)
+                .voucherCode(order.getVoucher() != null ? order.getVoucher().getCode() : null)
                 .build();
     }
 

@@ -26,6 +26,8 @@ public interface BuyerService {
 
     void deleteAddress(Long addressId);
 
+    VoucherPreviewResponse previewVoucher(VoucherPreviewRequest request);
+
     BuyerOrderResponse checkout(CheckoutRequest request);
 
     Page<BuyerOrderResponse> getOrders(Integer status, int page, int pageSize);

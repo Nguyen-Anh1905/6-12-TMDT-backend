@@ -22,6 +22,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BuyerServiceImpl implements BuyerService {
 
+    private static final long SHIPPING_FEE = 30000L;
+
     private final UserRepository userRepository;
     private final CartRepository cartRepository;
     private final CartProductRepository cartProductRepository;
@@ -243,6 +245,7 @@ public class BuyerServiceImpl implements BuyerService {
             throw new RuntimeException("Vui long chon phuong thuc thanh toan");
         }
 
+
         AddressEntity address = addressRepository.findByAddressIdAndUserUserId(request.getAddressId(), user.getUserId())
                 .orElseThrow(() -> new RuntimeException("Dia chi khong ton tai"));
 
@@ -287,10 +290,16 @@ public class BuyerServiceImpl implements BuyerService {
             if (voucher.getMinOrderValue() != null && subtotal < voucher.getMinOrderValue().longValue()) {
                 throw new RuntimeException("Don hang chua dat gia tri toi thieu");
             }
+            // Enforce usage limit if configured
+            Integer usageLimit = voucher.getUsageLimit();
+            Integer usedCount = voucher.getUsedCount() != null ? voucher.getUsedCount() : 0;
+            if (usageLimit != null && usageLimit > 0 && usedCount >= usageLimit) {
+                throw new RuntimeException("Voucher da het luong su dung");
+            }
             discount = calculateDiscount(voucher, subtotal);
         }
 
-        long totalAmount = Math.max(0, subtotal - discount);
+        long totalAmount = Math.max(0, subtotal - discount) + SHIPPING_FEE;
         ShopEntity shop = shopItems.get(0).getProduct().getShop();
 
         String orderCode = "ORD-" + System.currentTimeMillis();
@@ -410,6 +419,14 @@ public class BuyerServiceImpl implements BuyerService {
         ProductEntity product = productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new RuntimeException("San pham khong ton tai"));
 
+        boolean productInOrder = orderDetailRepository.findByOrderOrderId(order.getOrderId()).stream()
+            .anyMatch(detail -> detail.getProduct() != null
+                && detail.getProduct().getProductId() != null
+                && detail.getProduct().getProductId().equals(product.getProductId()));
+        if (!productInOrder) {
+            throw new RuntimeException("San pham khong thuoc don hang nay");
+        }
+
         if (reviewRepository.existsByUserUserIdAndProductProductIdAndOrderOrderId(
                 user.getUserId(), product.getProductId(), order.getOrderId())) {
             throw new RuntimeException("Ban da danh gia san pham nay");
@@ -445,15 +462,86 @@ public class BuyerServiceImpl implements BuyerService {
         });
     }
 
-    private long calculateDiscount(VoucherEntity voucher, long subtotal) {
-        if ("PERCENT".equalsIgnoreCase(voucher.getDiscountType())) {
-            long discount = (long) (subtotal * voucher.getDiscountValue() / 100.0);
-            if (voucher.getMaxDiscount() != null) {
-                discount = Math.min(discount, voucher.getMaxDiscount().longValue());
-            }
-            return discount;
+    @Override
+    public VoucherPreviewResponse previewVoucher(VoucherPreviewRequest request) {
+        if (request == null || request.getShopId() == null || request.getSubtotal() == null) {
+            throw new RuntimeException("Thieu thong tin preview voucher");
         }
-        return voucher.getDiscountValue() != null ? voucher.getDiscountValue().longValue() : 0;
+        long subtotal = request.getSubtotal();
+        if (request.getVoucherCode() == null || request.getVoucherCode().isBlank()) {
+            return VoucherPreviewResponse.builder()
+                    .subtotal(subtotal)
+                    .discountAmount(0L)
+                    .finalAmount(subtotal)
+                    .shippingFee(SHIPPING_FEE)
+                    .totalPayable(subtotal + SHIPPING_FEE)
+                    .valid(true)
+                    .message("Khong co voucher")
+                    .build();
+        }
+
+        VoucherEntity voucher = voucherRepository.findByCodeAndShopShopId(
+                request.getVoucherCode().trim().toUpperCase(), request.getShopId()
+        ).orElseThrow(() -> new RuntimeException("Ma voucher khong hop le"));
+
+        Integer usageLimit = voucher.getUsageLimit();
+        Integer usedCount = voucher.getUsedCount() != null ? voucher.getUsedCount() : 0;
+        if (voucher.getIsActive() == null || voucher.getIsActive() != 1) {
+            return buildVoucherPreviewResponse(voucher, subtotal, 0L, false, "Voucher khong con hieu luc", usageLimit, usedCount);
+        }
+        if (voucher.getMinOrderValue() != null && subtotal < voucher.getMinOrderValue().longValue()) {
+            return buildVoucherPreviewResponse(voucher, subtotal, 0L, false, "Don hang chua dat gia tri toi thieu", usageLimit, usedCount);
+        }
+        if (usageLimit != null && usageLimit > 0 && usedCount >= usageLimit) {
+            return buildVoucherPreviewResponse(voucher, subtotal, 0L, false, "Voucher da het luong su dung", usageLimit, usedCount);
+        }
+
+        long discount = calculateDiscount(voucher, subtotal);
+        return buildVoucherPreviewResponse(voucher, subtotal, discount, true, "Ap dung voucher thanh cong", usageLimit, usedCount);
+    }
+
+    private VoucherPreviewResponse buildVoucherPreviewResponse(
+            VoucherEntity voucher,
+            long subtotal,
+            long discount,
+            boolean valid,
+            String message,
+            Integer usageLimit,
+            Integer usedCount
+    ) {
+        return VoucherPreviewResponse.builder()
+                .voucherId(voucher.getVoucherId())
+                .code(voucher.getCode())
+                .discountType(voucher.getDiscountType())
+                .discountValue(voucher.getDiscountValue())
+                .minOrderValue(voucher.getMinOrderValue())
+                .maxDiscount(voucher.getMaxDiscount())
+                .subtotal(subtotal)
+                .discountAmount(discount)
+                .finalAmount(Math.max(0L, subtotal - discount))
+                .shippingFee(SHIPPING_FEE)
+                .totalPayable(Math.max(0L, subtotal - discount) + SHIPPING_FEE)
+                .usageLimit(usageLimit)
+                .usedCount(usedCount)
+                .isActive(voucher.getIsActive())
+                .valid(valid)
+                .message(message)
+                .build();
+    }
+
+    private long calculateDiscount(VoucherEntity voucher, long subtotal) {
+        long discount;
+        if ("PERCENT".equalsIgnoreCase(voucher.getDiscountType())) {
+            discount = (long) Math.floor(subtotal * voucher.getDiscountValue() / 100.0);
+        } else {
+            discount = voucher.getDiscountValue() != null ? voucher.getDiscountValue().longValue() : 0L;
+        }
+
+        if (voucher.getMaxDiscount() != null && voucher.getMaxDiscount() > 0) {
+            discount = Math.min(discount, voucher.getMaxDiscount().longValue());
+        }
+
+        return Math.max(0L, discount);
     }
 
     private void restoreOrderStock(Long orderId) {
@@ -537,15 +625,44 @@ public class BuyerServiceImpl implements BuyerService {
 
     private BuyerOrderResponse toBuyerOrderResponse(OrderEntity order) {
         List<OrderDetailEntity> details = orderDetailRepository.findByOrderOrderId(order.getOrderId());
+        Long userId = order.getUser() != null ? order.getUser().getUserId() : null;
+        final Map<Long, ReviewEntity> reviewByProductId = userId == null
+            ? Collections.emptyMap()
+            : reviewRepository.findByOrderOrderIdAndUserUserId(order.getOrderId(), userId).stream()
+                .filter(r -> r.getProduct() != null && r.getProduct().getProductId() != null)
+                .collect(Collectors.toMap(
+                    r -> r.getProduct().getProductId(),
+                    r -> r,
+                    (existing, replacement) -> existing.getCreatedAt() != null
+                        && replacement.getCreatedAt() != null
+                        && existing.getCreatedAt().isAfter(replacement.getCreatedAt())
+                        ? existing
+                        : replacement
+                ));
+
         List<SellerOrderItemResponse> items = details.stream()
-                .map(d -> SellerOrderItemResponse.builder()
-                        .productId(d.getProduct() != null ? d.getProduct().getProductId() : null)
-                        .productName(d.getProduct() != null ? d.getProduct().getProductName() : null)
-                        .imageUrl(d.getProduct() != null ? d.getProduct().getImageUrl() : null)
-                        .quantity(d.getQuantity())
-                        .priceAtPurchase(d.getPriceAtPurchase() != null ? d.getPriceAtPurchase().longValue() : 0L)
-                        .build())
+            .map(d -> {
+                Long productId = d.getProduct() != null ? d.getProduct().getProductId() : null;
+                ReviewEntity review = productId != null ? reviewByProductId.get(productId) : null;
+                return SellerOrderItemResponse.builder()
+                    .productId(productId)
+                    .productName(d.getProduct() != null ? d.getProduct().getProductName() : null)
+                    .imageUrl(d.getProduct() != null ? d.getProduct().getImageUrl() : null)
+                    .quantity(d.getQuantity())
+                    .priceAtPurchase(d.getPriceAtPurchase() != null ? d.getPriceAtPurchase().longValue() : 0L)
+                    .variantLabel(d.getVariantLabel())
+                    .lineTotal((d.getPriceAtPurchase() != null ? d.getPriceAtPurchase().longValue() : 0L) * d.getQuantity())
+                    .reviewId(review != null ? review.getReviewId() : null)
+                    .reviewStar(review != null ? review.getStar() : null)
+                    .reviewContent(review != null ? review.getContent() : null)
+                    .reviewCreatedAt(review != null ? review.getCreatedAt() : null)
+                    .build();
+            })
                 .collect(Collectors.toList());
+
+        long subtotal = items.stream().mapToLong(i -> i.getLineTotal() != null ? i.getLineTotal() : 0L).sum();
+        long orderTotal = order.getTotalAmount() != null ? order.getTotalAmount() : 0L;
+        long discount = Math.max(0, subtotal + SHIPPING_FEE - orderTotal);
 
         return BuyerOrderResponse.builder()
                 .orderId(order.getOrderId())
@@ -560,7 +677,11 @@ public class BuyerServiceImpl implements BuyerService {
                 .shopId(order.getShop() != null ? order.getShop().getShopId() : null)
                 .shopName(order.getShop() != null ? order.getShop().getShopName() : null)
                 .createdAt(order.getCreatedAt())
-                .items(items)
+            .items(items)
+            .subtotal(subtotal)
+            .shippingFee(SHIPPING_FEE)
+            .discountAmount(discount)
+            .voucherCode(order.getVoucher() != null ? order.getVoucher().getCode() : null)
                 .build();
     }
 }

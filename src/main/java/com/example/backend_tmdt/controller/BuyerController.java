@@ -76,6 +76,11 @@ public class BuyerController {
                 .body(ApiResponse.success(buyerService.checkout(request), "Dat hang thanh cong"));
     }
 
+    @PostMapping("/vouchers/preview")
+    public ResponseEntity<ApiResponse<VoucherPreviewResponse>> previewVoucher(@RequestBody VoucherPreviewRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(buyerService.previewVoucher(request), "Preview voucher thanh cong"));
+    }
+
     @GetMapping("/orders")
     public ResponseEntity<ApiResponse<Page<BuyerOrderResponse>>> getOrders(
             @RequestParam(required = false) Integer status,

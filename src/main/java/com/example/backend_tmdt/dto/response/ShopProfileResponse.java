@@ -13,5 +13,6 @@ public class ShopProfileResponse {
     private String description;
     private Integer status;
     private Float averageRating;
+    private Long reviewCount;
     private Integer productCount;
 }

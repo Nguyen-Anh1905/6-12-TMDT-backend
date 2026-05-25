@@ -22,4 +22,8 @@ public class SellerOrderResponse {
     private String buyerName;
     private LocalDateTime createdAt;
     private List<SellerOrderItemResponse> items;
+    private Long subtotal;
+    private Long shippingFee;
+    private Long discountAmount;
+    private String voucherCode;
 }
