@@ -154,4 +154,12 @@ public class SellerController {
         sellerService.deleteVoucher(voucherId);
         return ResponseEntity.ok(ApiResponse.success("Xoa voucher thanh cong"));
     }
+
+    @GetMapping("/statistics/advanced")
+    public ResponseEntity<ApiResponse<SellerStatisticsResponse>> getAdvancedStatistics(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(sellerService.getAdvancedStatistics(from, to), "Lay thong ke nang cao thanh cong"));
+    }
 }

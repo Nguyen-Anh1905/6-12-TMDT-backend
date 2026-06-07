@@ -45,4 +45,6 @@ public interface SellerService {
     VoucherResponse updateVoucher(Long voucherId, UpdateVoucherRequest request);
 
     void deleteVoucher(Long voucherId);
+
+    SellerStatisticsResponse getAdvancedStatistics(LocalDate from, LocalDate to);
 }

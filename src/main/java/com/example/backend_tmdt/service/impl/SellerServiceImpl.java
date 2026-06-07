@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -455,7 +456,8 @@ public class SellerServiceImpl implements SellerService {
             default -> false;
         };
         if (!valid) {
-            throw new RuntimeException("Khong the chuyen tu " + OrderStatus.label(current) + " sang " + OrderStatus.label(next));
+            throw new RuntimeException(
+                    "Khong the chuyen tu " + OrderStatus.label(current) + " sang " + OrderStatus.label(next));
         }
     }
 
@@ -490,14 +492,16 @@ public class SellerServiceImpl implements SellerService {
                         .imageUrl(d.getProduct() != null ? d.getProduct().getImageUrl() : null)
                         .quantity(d.getQuantity())
                         .priceAtPurchase(d.getPriceAtPurchase() != null ? d.getPriceAtPurchase().longValue() : 0L)
-                    .variantLabel(d.getVariantLabel())
-                    .lineTotal((d.getPriceAtPurchase() != null ? d.getPriceAtPurchase().longValue() : 0L) * d.getQuantity())
+                        .variantLabel(d.getVariantLabel())
+                        .lineTotal((d.getPriceAtPurchase() != null ? d.getPriceAtPurchase().longValue() : 0L)
+                                * d.getQuantity())
                         .build())
                 .toList();
 
         long subtotal = items.stream().mapToLong(item -> item.getLineTotal() != null ? item.getLineTotal() : 0L).sum();
         long shippingFee = 30000L;
-        long discountAmount = Math.max(0L, subtotal + shippingFee - (order.getTotalAmount() != null ? order.getTotalAmount() : 0L));
+        long discountAmount = Math.max(0L,
+                subtotal + shippingFee - (order.getTotalAmount() != null ? order.getTotalAmount() : 0L));
 
         return SellerOrderResponse.builder()
                 .orderId(order.getOrderId())
@@ -529,11 +533,10 @@ public class SellerServiceImpl implements SellerService {
                 .content(review.getContent())
                 .createdAt(review.getCreatedAt());
 
-        replyRepository.findFirstByReviewReviewId(review.getReviewId()).ifPresent(reply ->
-                builder.replyId(reply.getId())
+        replyRepository.findFirstByReviewReviewId(review.getReviewId())
+                .ifPresent(reply -> builder.replyId(reply.getId())
                         .replyContent(reply.getContent())
-                        .replyCreatedAt(reply.getCreatedAt())
-        );
+                        .replyCreatedAt(reply.getCreatedAt()));
 
         return builder.build();
     }
@@ -552,5 +555,124 @@ public class SellerServiceImpl implements SellerService {
                 .endDate(voucher.getEndDate())
                 .isActive(voucher.getIsActive())
                 .build();
+    }
+
+    @Override
+    public SellerStatisticsResponse getAdvancedStatistics(LocalDate from, LocalDate to) {
+        ShopEntity shop = requireShop();
+        Long shopId = shop.getShopId();
+
+        LocalDate end = to != null ? to : LocalDate.now();
+        LocalDate start = from != null ? from : end.minusDays(30);
+        LocalDateTime currentStart = start.atStartOfDay();
+        LocalDateTime currentEnd = end.plusDays(1).atStartOfDay();
+
+        long daysBetween = ChronoUnit.DAYS.between(start, end) + 1;
+        LocalDateTime previousStart = start.minusDays(daysBetween).atStartOfDay();
+        LocalDateTime previousEnd = currentStart;
+
+        Pageable top5 = PageRequest.of(0, 5);
+
+        List<Object[]> topSellingRaw = orderDetailRepository.findTopSellingProducts(
+                shopId, REVENUE_STATUSES, currentStart, currentEnd, top5);
+        List<SellerStatisticsResponse.ProductStatistic> topSelling = mapToProductStatistic(topSellingRaw);
+
+        List<Object[]> topRevenueRaw = orderDetailRepository.findTopRevenueProducts(
+                shopId, REVENUE_STATUSES, currentStart, currentEnd, top5);
+        List<SellerStatisticsResponse.ProductStatistic> topRevenue = mapToProductStatistic(topRevenueRaw);
+
+        List<OrderEntity> currentOrders = orderRepository.findByShopAndStatusInAndCreatedAtBetween(
+                shopId, REVENUE_STATUSES, currentStart, currentEnd);
+
+        long grossRevenue = 0;
+        long totalVoucherDiscount = 0;
+        long totalPlatformFee = 0;
+
+        for (OrderEntity order : currentOrders) {
+            long orderTotal = order.getTotalAmount() != null ? order.getTotalAmount() : 0;
+
+            // Voucher discount = tong tien voucher duoc giam trong don hang nay
+            long voucherDiscountAmount = 0;
+            if (order.getVoucher() != null) {
+                VoucherEntity v = order.getVoucher();
+                if ("PERCENT".equals(v.getDiscountType())) {
+                    double discounted = orderTotal * (v.getDiscountValue() / 100.0);
+                    if (v.getMaxDiscount() != null) discounted = Math.min(discounted, v.getMaxDiscount());
+                    voucherDiscountAmount = (long) discounted;
+                } else {
+                    voucherDiscountAmount = v.getDiscountValue() != null ? v.getDiscountValue().longValue() : 0;
+                }
+            }
+
+            long revenueAfterVoucher = orderTotal + voucherDiscountAmount; // khoi phuc lai truoc khi giam
+            grossRevenue += revenueAfterVoucher;
+            totalVoucherDiscount += voucherDiscountAmount;
+
+            long fee = (long) (orderTotal * 0.03); // 3% platform fee tren so tien thuc tra
+            totalPlatformFee += fee;
+        }
+
+        long netRevenue = grossRevenue - totalVoucherDiscount - totalPlatformFee;
+
+        SellerStatisticsResponse.ActualRevenueInfo actualRevenue = SellerStatisticsResponse.ActualRevenueInfo.builder()
+                .grossRevenue(grossRevenue)
+                .platformFee(totalPlatformFee)
+                .voucherDiscount(totalVoucherDiscount)
+                .netRevenue(netRevenue)
+                .build();
+
+        long currentPeriodRevenue = currentOrders.stream()
+                .mapToLong(o -> o.getTotalAmount() != null ? o.getTotalAmount() : 0)
+                .sum();
+
+        List<OrderEntity> previousOrders = orderRepository.findByShopAndStatusInAndCreatedAtBetween(
+                shopId, REVENUE_STATUSES, previousStart, previousEnd);
+
+        long previousPeriodRevenue = previousOrders.stream()
+                .mapToLong(o -> o.getTotalAmount() != null ? o.getTotalAmount() : 0)
+                .sum();
+
+        double growthRate = 0;
+        if (previousPeriodRevenue > 0) {
+            growthRate = ((double) (currentPeriodRevenue - previousPeriodRevenue) / previousPeriodRevenue) * 100.0;
+        } else if (currentPeriodRevenue > 0) {
+            growthRate = 100.0;
+        }
+
+        SellerStatisticsResponse.RevenueComparison revenueComparison = SellerStatisticsResponse.RevenueComparison
+                .builder()
+                .currentPeriodRevenue(currentPeriodRevenue)
+                .previousPeriodRevenue(previousPeriodRevenue)
+                .growthRate(Math.round(growthRate * 100.0) / 100.0)
+                .build();
+
+        double averageOrderValue = currentOrders.isEmpty() ? 0 : (double) currentPeriodRevenue / currentOrders.size();
+
+        SellerStatisticsResponse.AverageMetrics averageMetrics = SellerStatisticsResponse.AverageMetrics.builder()
+                .averageOrderValue(Math.round(averageOrderValue * 100.0) / 100.0)
+                .build();
+
+        return SellerStatisticsResponse.builder()
+                .actualRevenue(actualRevenue)
+                .topSellingProducts(topSelling)
+                .topRevenueProducts(topRevenue)
+                .revenueComparison(revenueComparison)
+                .averageMetrics(averageMetrics)
+                .build();
+    }
+
+    private List<SellerStatisticsResponse.ProductStatistic> mapToProductStatistic(List<Object[]> rawList) {
+        List<SellerStatisticsResponse.ProductStatistic> result = new ArrayList<>();
+        for (Object[] row : rawList) {
+            result.add(SellerStatisticsResponse.ProductStatistic.builder()
+                    .productId(row[0] != null ? ((Number) row[0]).longValue() : null)
+                    .productName((String) row[1])
+                    .variantLabel((String) row[2])
+                    .imageUrl((String) row[3])
+                    .totalQuantitySold(row[4] != null ? ((Number) row[4]).longValue() : 0)
+                    .totalRevenue(row[5] != null ? ((Number) row[5]).longValue() : 0)
+                    .build());
+        }
+        return result;
     }
 }
