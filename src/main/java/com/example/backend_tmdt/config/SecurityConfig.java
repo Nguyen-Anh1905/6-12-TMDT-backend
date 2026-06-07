@@ -50,6 +50,8 @@ public class SecurityConfig {
                         .requestMatchers(org.springframework.http.HttpMethod.GET,
                                 "/api/products", "/api/products/**", "/api/categories", "/api/shops", "/api/shops/**").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/products/search", "/api/products/image-search").permitAll()
+                        // Anh san pham (static files): ai cung xem duoc
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/image/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/seller/**").hasAnyRole("SELLER", "ADMIN")
                         // Buyer: gio hang, don hang, dia chi - can dang nhap (moi role dang nhap deu mua duoc)
