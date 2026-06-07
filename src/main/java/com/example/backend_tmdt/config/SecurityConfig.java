@@ -49,7 +49,7 @@ public class SecurityConfig {
                         // Guest: xem san pham, danh muc, shop khong can dang nhap
                         .requestMatchers(org.springframework.http.HttpMethod.GET,
                                 "/api/products", "/api/products/**", "/api/categories", "/api/shops", "/api/shops/**").permitAll()
-                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/products/search").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/products/search", "/api/products/image-search").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/seller/**").hasAnyRole("SELLER", "ADMIN")
                         // Buyer: gio hang, don hang, dia chi - can dang nhap (moi role dang nhap deu mua duoc)

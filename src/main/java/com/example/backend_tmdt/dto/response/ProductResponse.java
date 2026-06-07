@@ -24,6 +24,7 @@ public class ProductResponse {
     private String categoryName;
     private Long shopId;
     private String shopName;
+    private Float imageSimilarity;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

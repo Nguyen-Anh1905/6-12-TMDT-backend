@@ -6,6 +6,7 @@ import com.example.backend_tmdt.dto.request.UpdateProductRequest;
 import com.example.backend_tmdt.dto.response.ProductListResponse;
 import com.example.backend_tmdt.dto.response.ProductResponse;
 import com.example.backend_tmdt.entity.ProductEntity;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Optional;
@@ -24,6 +25,8 @@ public interface ProductService {
     ProductListResponse getProductsByShop(Long shopId, Integer page, Integer pageSize);
 
     ProductListResponse getProductsByCategory(Long categoryId, Integer page, Integer pageSize);
+
+    ProductListResponse searchProductsByImage(MultipartFile image, Integer page, Integer pageSize);
 
     void deleteProduct(Long productId);
 

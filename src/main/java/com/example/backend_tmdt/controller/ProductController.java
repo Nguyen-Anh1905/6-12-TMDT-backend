@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -59,6 +60,15 @@ public class ProductController {
     @PostMapping("/search")
     public ResponseEntity<ProductListResponse> searchProducts(@RequestBody SearchProductRequest request) {
         ProductListResponse response = productService.searchProducts(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/image-search")
+    public ResponseEntity<ProductListResponse> searchProductsByImage(
+            @RequestParam("image") MultipartFile image,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "20") Integer pageSize) {
+        ProductListResponse response = productService.searchProductsByImage(image, page, pageSize);
         return ResponseEntity.ok(response);
     }
 
